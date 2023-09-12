@@ -6,49 +6,48 @@
 /*   By: shujiang <shujiang@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/08/09 18:49:20 by shujiang          #+#    #+#             */
-/*   Updated: 2023/08/22 16:34:18 by shujiang         ###   ########.fr       */
+/*   Updated: 2023/09/07 16:03:02 by samusanc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <minishell.h>
 
-void	creat_exp_list(char **env, t_static *s)
+void	creat_exp_list(t_static *s)
 {	
 	int i;
 	t_list *new;
     t_list *temp;
     
-    i = 1;
+    i = 0;
     new = NULL;
     temp = NULL;
-    if (env == NULL)
+    
+    s->exp = ft_lstnew(ft_strjoin("declare -x ", s->env->content));
+	if (s->env->next)
+		temp = s->env->next;
+    while(temp)
     {
-       printf("Error: No env\n");
-       exit (1);
-    }
-    s->exp = ft_lstnew(ft_strjoin("declare -x ", env[0]));
-    temp = s->exp;
-    while(env[i])
-    {
-        new = ft_lstnew(ft_strjoin("declare -x ", env[i]));
-        ft_lstadd_back(&temp, new);
-        i++;
+        new = ft_lstnew(ft_strjoin("declare -x ", temp->content));
+        add_list_and_sort(&(s->exp), new);
+        temp  = temp ->next;
     }
 }
 
 void    print_exp(void)
 {
-    int i;
     t_list *temp;
     t_static *s;
+	char *value;
 
 	s = ft_get_static();
-    i = 0;
     temp = s->exp;
     while(temp)
     {
-		if (temp->content)
-        	printf("%s\n", temp->content);
+		value = ft_strchr(temp->content, '=');
+		if (value && ft_strlen(value) == 1)
+        	printf("%s\n", ft_substr(temp->content, 0, ft_strlen(temp->content) -  1));
+		else
+			printf("%s\n", temp->content);
         temp = temp->next;
     }
 }
@@ -64,7 +63,11 @@ int	ft_parsing(char	*str)
 		if ((!ft_isalnum((int)str[i])) 
 			&& ((i == 0 && str[i] != '_') || (i != 0 && str[i] != '=')))
 		{
-			printf("minishell: export: %s: not a valid identifier\n", str);
+
+			ft_putstr_fd("minishell: ", STDERR_FILENO);
+			ft_putstr_fd("export: ", STDERR_FILENO);
+			ft_putstr_fd(str, STDERR_FILENO);
+			ft_putstr_fd(": not a valid identifier\n", STDERR_FILENO);
 			//free;
 			return (0);
 		}
@@ -104,10 +107,9 @@ char	*var_existed(char *str)
     while(temp)
     {
 		exp = temp->content;
-        if(exp && ft_strncmp(exp + 11, var, len) == 0 && ((exp + 11)[len] == '\0' || (exp + 11)[len] == '=' ))
-		{
+        if(exp && ft_strncmp(exp + 11, var, len) == 0
+			&& ((exp + 11)[len] == '\0' || (exp + 11)[len] == '=' ))
 			return (exp);
-		}		
         temp = temp->next;
     }
 	return (NULL);
@@ -116,7 +118,7 @@ char	*var_existed(char *str)
 void add_new_var_exp(char *str)
 {
 	t_list *new;
-	t_list *temp;
+	//t_list *temp;
 	char *new1;
 	char *new2;
 	char *new3;
@@ -151,25 +153,19 @@ void add_new_var_exp(char *str)
 			new2 = ft_strjoin(new1 , new3);
 		}
 	}
-	temp = s->exp;
 	new = ft_lstnew(new2);
-    ft_lstadd_back(&temp, new);
+     add_list_and_sort(&(s->exp), new);
 }
 
 void add_new_var_env(char *str)
 {
 	t_list *new;
-	t_list *temp;
-	char *new1;
-	char *new2;
 	t_static *s;
 
 	s = ft_get_static();
-	new1 = NULL;
-	new2 = NULL;
-	temp = s->env_cpy;
 	new = ft_lstnew(str);
-    ft_lstadd_back(&temp, new);
+    add_list_and_sort(&(s->env), new);
+
 }
 
 void	modify_exp(char *str)
@@ -216,7 +212,7 @@ void	modify_env(char *str)
 	t_static *s;
 	
 	s = ft_get_static();
-	temp = s->env_cpy;
+	temp = s->env;
 	while(temp)
 	{
 		old = temp->content;
@@ -227,13 +223,15 @@ void	modify_env(char *str)
 	if (temp)
 		temp->content = str;
 }
+
 void	ft_export(char **input)
 {
 	int i;
 	char *var;
 	char *old;
+	t_static *s;
 	
-
+	s = ft_get_static();
 	i = 1;
 	var = NULL;
 	old = NULL;
@@ -259,7 +257,6 @@ void	ft_export(char **input)
 				if (ft_strchr(var, '='))
 				{
 					modify_exp(var);
-					
 					if (!ft_strchr(old, '='))
 					{
 						add_new_var_env(var);
@@ -272,6 +269,11 @@ void	ft_export(char **input)
 					}	
 				}
 			}
+		}
+		else
+		{
+			errno = 2;
+			return ;
 		}
 		i++;
 	}

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   executer.c                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: samusanc <samusanc@student.42madrid>       +#+  +:+       +#+        */
+/*   By: shujiang <shujiang@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/08/22 15:50:18 by samusanc          #+#    #+#             */
-/*   Updated: 2023/09/02 14:29:58 by samusanc         ###   ########.fr       */
+/*   Updated: 2023/09/12 16:36:05 by samusanc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,7 +33,14 @@ int		ft_exc_execution(char *cmd, char **env)
 
 int	ft_error_exc_unexpected_token(int minor, int major, char first)
 {	
-	if ((minor > 2) || (major == 2 && !minor))
+	if (first == 'A')
+	{
+		if (minor)
+			ft_print_error("syntax error near unexpected token `<'", 258);
+		if (major)
+			ft_print_error("syntax error near unexpected token `>'", 258);
+	}
+	else if ((minor > 2) || (major == 2 && !minor))
 		ft_print_error("syntax error near unexpected token `<'", 258);
 	else if ((major > 2) || (minor == 2 && !major))
 		ft_print_error("syntax error near unexpected token `>'", 258);
@@ -61,7 +68,7 @@ void	ft_init_exc_lex(t_exc_lex *lex)
 	ft_init_cmd(&lex->cmd);
 }
 
-int	ft_check_parse_normal_char(t_exc_lex *lex)
+int	ft_check_parse_normal_char(t_exc_lex *lex, int *space)
 {
 	if (lex->major > 2 || lex->minor > 2 || lex->redirs > 2)
 	{
@@ -71,11 +78,14 @@ int	ft_check_parse_normal_char(t_exc_lex *lex)
 	lex->major = 0;
 	lex->minor = 0;
 	lex->redirs = 0;
+	*space = 0;
 	return (0);
 }
 
-int	ft_check_parse_redirs(t_exc_lex *lex)
+int	ft_check_parse_redirs(t_exc_lex *lex, int *space)
 {
+	if (*space)
+		return (ft_error_exc_unexpected_token(lex->minor, lex->major, 'A'));
 	if (lex->input[lex->i] == '<' && !lex->major)
 	{
 		if (!lex->redirs)
@@ -102,7 +112,11 @@ int	ft_check_parse_redirs(t_exc_lex *lex)
 int	ft_check_dup_redir(char *input)
 {
 	t_exc_lex	lex;
+	int			space;
+	int			word;
 
+	space = 0;
+	word = 0;
 	lex.input = input;
 	ft_init_exc_lex(&lex);
 	while (input[lex.i])
@@ -110,16 +124,21 @@ int	ft_check_dup_redir(char *input)
 		lex.j = ft_check_char(&lex.cmd, input[lex.i]);
 		if (!lex.j || lex.j == -1)
 		{
+			if (!lex.j)
+			{
+				if (lex.major || lex.minor || lex.redirs)
+					space = 1;
+			}
 			ft_init_cmd(&lex.cmd);
 		}
 		else
 		{
-			if(ft_check_parse_normal_char(&lex) == -1)
+			if(ft_check_parse_normal_char(&lex, &space) == -1)
 				return (-1);
 		}
 		if (lex.j == -1 && (input[lex.i] == '<' || input[lex.i] == '>'))
 		{
-			if(ft_check_parse_redirs(&lex) == -1)
+			if(ft_check_parse_redirs(&lex, &space) == -1)
 				return (-1);
 		}
 		lex.i += 1;
@@ -163,31 +182,103 @@ size_t	ft_strlen2(char *str)
 	return (i);
 }
 
+char	*cut_input(char *str, int *i)
+{
+	char	**split;
+	char	*result;
+
+	result = NULL;
+	split = ft_lexer(str);
+	if (!split)
+		return (NULL);
+	if (*split)
+		result = ft_strdup(*split);
+	ft_free_split_2(&split);
+	if (!result)
+	{
+		if (i)
+			*i = -1;
+		return (str);
+	}
+	return (result);
+}
+
 int	ft_exc_here_doc(t_argument *content, t_exc_lex *lex)
 {
-	char	*str;
 	int		pipes[2];
+	int		pid;
+	int		status;
 
 	if(pipe(pipes))
-		return (-1);
+		exit(errno);
 	content->type = ft_strdup("hre");
-	write((int)((ft_get_static())->here), ">", 1);
-	str = get_next_line((int)((ft_get_static())->here));
-	if (!str)
-		return (-1);
-	while (ft_strncmp(content->str, str, ft_strlen2(content->str)) && str)
+	pid = fork();
+	if (!pid)
 	{
-		write((int)((ft_get_static())->here), ">", 1);
-		ft_putstr_fd(str, pipes[1]);
-		free(str);
-		str = get_next_line((int)((ft_get_static())->here));
+		char	*str;
+
+		flag = HERE;
+		//write((int)((ft_get_static())->here), "> ", 2);
+		content->str = cut_input(content->str, NULL);
+		//str = get_next_line((int)((ft_get_static())->here));
+		//printf("str:%svs%s\n", str, content->str);
+		str = readline("> ");
 		if (!str)
-			return (-1);
+			exit (0);
+		while (1)
+		{
+			if (!ft_strncmp(content->str, str, ft_strlen2(content->str) + 1))
+				exit(1);
+			//aprintf("str:%svs%s\n", str, content->str);
+			//write((int)((ft_get_static())->here), "> ", 2);
+			ft_putstr_fd(str, pipes[1]);
+			write(pipes[1], "\n", 1);
+			free(str);
+			//str = get_next_line((int)((ft_get_static())->here));
+			str = readline("> ");
+			if (!str)
+				exit (0);
+		}
+		free(str);
+		exit(0);
 	}
-	free(str);
+	waitpid(pid, &status, 0);
+	flag = PROCCESS;
+	if (WEXITSTATUS(status) == 2)
+	{
+		flag = 3;
+		close(pipes[1]);
+		close(pipes[0]);
+		errno = 1;
+		return (-1);
+	}
 	close(pipes[1]);
 	lex->in = pipes[0];
 	return (pipes[0]);
+}
+
+void	get_redir(t_argument *content)
+{
+	char *str;
+	int		i;
+
+	i = 0;
+	if (content->str)
+		str = cut_input(content->str, &i);
+	else
+		return ;
+	if (i)
+	{
+		ft_putstr_fd("minishell: ", STDERR_FILENO);
+		ft_putstr_fd(content->str, STDERR_FILENO);
+		ft_putstr_fd(": ambiguous redirect\n", STDERR_FILENO);
+		ft_free((void **)&content->str);
+		content->str = NULL;
+		return ;
+	}
+	ft_free((void **)&content->str);
+	content->str = str;
+	return ;
 }
 
 int	ft_exc_change_input(t_argument *content, t_exc_lex *lex)
@@ -195,9 +286,18 @@ int	ft_exc_change_input(t_argument *content, t_exc_lex *lex)
 	int	fd;
 
 	content->type = ft_strdup("inp");
+	get_redir(content);
+	if (!content->str)
+		return (-1);
 	fd = open(content->str, O_RDONLY);
 	if (fd == -1)
+	{
+		ft_putstr_fd("minishell: ", STDERR_FILENO);
+		ft_putstr_fd(content->str, STDERR_FILENO);
+		ft_putstr_fd(": ", STDERR_FILENO);
+		perror(NULL);
 		return (-1);
+	}
 	lex->in = fd;
 	return (fd);
 }
@@ -207,9 +307,19 @@ int	ft_exc_change_output_trc(t_argument *content, t_exc_lex *lex)
 	int	fd;
 
 	content->type = ft_strdup("trc");
+	get_redir(content);
+	if (!content->str)
+		return (-1);
 	fd = open(content->str, O_CREAT | O_WRONLY | O_TRUNC, 0644);
 	if (fd == -1)
+	{
+		ft_putstr_fd("minishell: ", STDERR_FILENO);
+		ft_putstr_fd(content->str, STDERR_FILENO);
+		ft_putstr_fd(": ", STDERR_FILENO);
+		perror(NULL);
 		return (-1);
+	}
+	lex->in = fd;
 	lex->out = fd;
 	return (fd);
 }
@@ -219,9 +329,18 @@ int	ft_exc_change_output_apd(t_argument *content, t_exc_lex *lex)
 	int	fd;
 
 	content->type = ft_strdup("apd");
+	get_redir(content);
+	if (!content->str)
+		return (-1);
 	fd = open(content->str, O_CREAT | O_RDWR | O_APPEND, 0644);
 	if (fd == -1)
+	{
+		ft_putstr_fd("minishell: ", STDERR_FILENO);
+		ft_putstr_fd(content->str, STDERR_FILENO);
+		ft_putstr_fd(": ", STDERR_FILENO);
+		perror(NULL);
 		return (-1);
+	}
 	lex->out = fd;
 	return (fd);
 }
@@ -276,7 +395,9 @@ t_list	*ft_exc_new_node(char *argument, t_redir type, t_exc_lex *lex)
 	else
 		content->fd = ft_exc_open_fd(content, type, lex);
 	if (!content->str || !content->type || content->fd == -1)
+	{
 		return (ft_exc_free_content((void *)content));
+	}
 	result = ft_lstnew((void *)content);
 	if (!result)
 		return (ft_exc_free_content((void *)content));
@@ -387,7 +508,7 @@ void *ft_not_closed_pipe(char **env)
 	return (NULL);
 }
 
-t_list	*ft_exc_lex_input(char *input, int std[2], char **env)
+t_list	*ft_exc_lex_input(char *input, int std[2])
 {
 	t_exc_lex	lex;
 	t_list		*result;
@@ -395,7 +516,10 @@ t_list	*ft_exc_lex_input(char *input, int std[2], char **env)
 	lex.input = input;
 	ft_init_exc_lex(&lex);
 	if (!input)
-		return (ft_not_closed_pipe(env));
+	{
+		ft_print_error("syntax error near unexpected token `|'", 257);
+		return (NULL);
+	}
 	else if (ft_check_dup_redir(input) == -1)
 		return (NULL);
 	result = ft_make_list(&lex);
@@ -431,7 +555,7 @@ char	*ft_good_strjoin(char *s1, char*s2)
 	return (ret);
 }
 
-char	*ft_exc_make_cmd(char *cmd, t_list **input)
+char	*ft_exc_make_cmd(t_list **input)
 {
 	char	*result;
 	char	*tmp1;
@@ -457,38 +581,63 @@ char	*ft_exc_make_cmd(char *cmd, t_list **input)
 	}
 	ft_exc_clear_content(input);
 	return (result);
-	cmd = NULL;
 }
 
-int ft_exc_make_redir(char *cmd, char **env)
+int ft_exc_make_redir(char *cmd, t_input *line)
 {
-	int		result;
 	int		std[2];
 	t_list	*input;
-	char	*new_cmd;
 
 	std[0] = STDIN_FILENO;
 	std[1] = STDOUT_FILENO;
-	input = ft_exc_lex_input(cmd, std, env);
+	input = ft_exc_lex_input(cmd, std);
 	if (!input)
+	{
+		if (errno != 9)
+			return (errno);
+		else
+			return (1);
+	}
+	line->in = dup(std[0]);
+	if (std[0] != STDIN_FILENO)
+		line->here = 1;
+	else
+		line->here = 0;
+	line->out = dup(std[1]);
+	if (line->in == -1 || line->out == -1)
 		return (errno);
-	dup2_with_error_check(std[0], STDIN_FILENO);
-	dup2_with_error_check(std[1], STDOUT_FILENO);
-	new_cmd = ft_exc_make_cmd(cmd, &input);
-	result = ft_exc_execution(new_cmd, env);
-	close(std[0]);
-	close(std[1]);
+	line->cmd = ft_exc_make_cmd(&input);
+	return (0);
+}
+
+int	ft_executer_exec(t_input *input, char **env)
+{
+	int	result;
+
+	result = 0;
+	dup2_with_error_check(input->in, STDIN_FILENO);
+	close(input->in);
+	dup2_with_error_check(input->out, STDOUT_FILENO);
+	close(input->out);
+	result = ft_exc_execution(input->cmd, env);
 	return (result);
 }
 
-int	executer(char *cmd, char **env)
+int	executer(char *cmd, t_input *input)
 {
 	int		cloud[2];
 	int		value;
-	
+	char	**env;
+	t_static *s;
+
+	s = ft_get_static();
+	env = NULL;
+	env = list_to_matrix(s->env);
+
 	cloud[0] = dup(0);
 	cloud[1] = dup(1);
-	value = ft_exc_make_redir(cmd, env);
+	//value = ft_exc_make_redir(cmd, env);
+	value = ft_executer_exec(input, env);
 	dup2_with_error_check(cloud[1], 1);
 	close(cloud[1]);
 	dup2_with_error_check(cloud[0], 0);
