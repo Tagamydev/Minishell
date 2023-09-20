@@ -6,7 +6,7 @@
 /*   By: shujiang <shujiang@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/31 16:34:14 by samusanc          #+#    #+#             */
-/*   Updated: 2023/09/12 16:36:09 by samusanc         ###   ########.fr       */
+/*   Updated: 2023/09/19 17:16:35 by shujiang         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,42 +49,6 @@ void	*ft_print_error(char *str, int error)
 	return (NULL);
 }
 
-
-/* void	ft_shlvl_sum(void)
-{
-	char *var = "SHLVL";
-	t_static *s;
-	char *env_var;
-	size_t len;
-	
-	s = ft_get_static();
-	len = ft_strlen(var);
-	while (s->env)
-	{
-		env_var = s->env->content;
-		if(env_var && var && !ft_strncmp(env_var, var, len) 
-			&& env_var[ft_strlen(var)]== '=')
-		{
-			int number;
-			char	*str;
-			extern char **environ;
-
-			number = ft_atoi(env_var + len + 1);
-			number++;
-			str = ft_itoa(number);
-			s->shlvl->content = str;
-			//printf("%s\n", ft_lstnew(ft_strjoin("SHLVL=", str))->content);
-			add_list_and_sort(&(s->env), ft_lstnew(ft_strjoin("SHLVL=", str)));
-			environ[0] = ft_strdup(env_var + len + 1);
-			return ;
-		}
-		s->env = s->env->next;
-	}
-	return ;
-} */
-
-
-
 int shell_mode(char **env)
 {
 	char	*line;
@@ -97,26 +61,24 @@ int shell_mode(char **env)
 	//atexit(leaks);
 	
 	ft_get_old_history(env, &fd_mini_history);
+	ft_put_history(fd_mini_history);
 	line = NULL;
 	signal(SIGINT, handler);
 	signal(SIGQUIT, quit_signal);
-	//if (s->shlvl)
-	//	shlvl++;
+	
+	history = NULL;
+	
+	ft_lstadd_back(&history, ft_lstnew((void *)ft_strdup("")));
 	ft_put_static(init_static_struct(env));
 	s = ft_get_static();
-	history = s->history;
-//	printf("%s\n", s->shlvl->content);
+	s->history = history;
+
 	ft_copy_env(env);
 
 	creat_exp_list(s);
-	add_list_and_sort(&(s->exp), ft_lstnew(ft_strjoin("declare -x ",s->shlvl->content)));
-	//export_to_real_env(s);
-	//ft_shlvl_sum();
-	
+
 	ft_put_error(0);
-	//creat_exp_list(s);
 	flag = SHELL;
-	//ft_shlvl_sum();
 	while (1)
 	{
 		if (flag != 3)
@@ -144,9 +106,9 @@ int shell_mode(char **env)
 	//		write(STDERR_FILENO, "exit\n", 5);
 			ft_free((void *)&line);
 			//printf("this is the error:%d\n", ft_get_error());
-			return(ft_get_error());
+			ft_save_history();
+			exit(ft_get_error());
 		}
-		
 		add_history(line);
 		ft_lstadd_back(&history, ft_lstnew((void *)ft_strdup(line)));
 		if (ft_check_argument(line) == 1)
@@ -157,7 +119,9 @@ int shell_mode(char **env)
 		else
 			ft_free((void *)&line);
 	}
-	return (ft_get_error());
+	/* printf("old: %s\n", s->oldpwd->content);
+    printf("last: %s\n", s->last_cmd->content); */
+	exit(ft_get_error());
 }
 
 int	exc_mode(char *file, char **env)
@@ -174,7 +138,6 @@ int	exc_mode(char *file, char **env)
 	ft_copy_env(env);
 
 	creat_exp_list(s);
-	add_list_and_sort(&(s->exp), ft_lstnew(ft_strjoin("declare -x ",s->shlvl->content)));
 	ft_put_error(0);
 
 	errno = 0;
@@ -218,6 +181,7 @@ int	main(int argc, char **argv, char **env)
 		return (shell_mode(env));
 	else 
 		return (exc_mode(argv[1], env));
+	
 }
 
 //This is a main to test the fuction add_list_and_sort

@@ -6,7 +6,7 @@
 /*   By: shujiang <shujiang@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/10 15:21:36 by samusanc          #+#    #+#             */
-/*   Updated: 2023/09/11 18:54:25 by samusanc         ###   ########.fr       */
+/*   Updated: 2023/09/20 16:20:49 by samusanc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,7 @@
 # include <readline/history.h>
 # include <signal.h>
 # include <ft_signals.h>
+# include <ft_history.h>
 
 int flag;
 void	rl_replace_line(const char *text, int clear_undo);
@@ -55,6 +56,7 @@ void    handler(int signal);
 void    ft_remove_node(t_list *list, int index);
 
 
+void	ft_save_history(void);
 t_static *init_static_struct();
 
 int			ft_exc_make_redir(char *cmd, t_input *line);
