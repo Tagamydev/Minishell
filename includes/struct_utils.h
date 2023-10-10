@@ -1,14 +1,15 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   pipex.h                                            :+:      :+:    :+:   */
+/*   struct_utils.h                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: shujiang <shujiang@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/04/19 16:30:42 by shujiang          #+#    #+#             */
-/*   Updated: 2023/09/20 19:00:16 by samusanc         ###   ########.fr       */
+/*   Updated: 2023/10/09 15:06:27 by samusanc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
 #ifndef STRUCT_UTILS_H
 # define STRUCT_UTILS_H
 # include <lexer.h>
@@ -25,11 +26,11 @@ typedef enum e_redir{
 	apd = 4
 }			t_redir;
 
-typedef	struct s_pipes{
+typedef struct s_pipes{
 	int	start_pipe[2];
 }				t_pipes;
 
-typedef	struct s_pipstr{
+typedef struct s_pipstr{
 	char	*cmd_cpy;
 	int		n;
 	int		i;
@@ -39,7 +40,7 @@ typedef	struct s_pipstr{
 	char	*cmd;
 }				t_pipstr;
 
-typedef	struct s_argument{
+typedef struct s_argument{
 	char	*str;
 	char	*type;
 	int		fd;
@@ -66,9 +67,8 @@ typedef struct s_dollar_fill{
 	int		i;
 	int		z;
 	char	*str2;
-	char 	*str3;
+	char	*str3;
 	t_list	*tmp;
-	//	external
 	char	*dst;
 	int		*x;
 }				t_dollar_fill;
@@ -105,7 +105,32 @@ typedef struct s_save_history{
 	t_list	*old_history;
 	int		fd;
 	char	**env;
+	char	**exp;
 	int		len;
 }				t_save_history;
 
+typedef struct s_lexer_len{
+	t_cmd	cmd;
+	int		len;
+	int		i;
+	int		j;
+	int		x;
+}				t_lexer_len;
+
+typedef struct s_alloc_parse{
+	char	**result;
+	char	*str2;
+	int		x;
+	int		i;
+	int		arg_len;
+}				t_alloc_parse;
+
+typedef struct s_export_var{
+	t_list	*tmp;
+	t_list	*tmp2;
+	char	*str;
+	char	*var;
+}				t_export_var;
+
+void		init_lexer_len(t_lexer_len *len);
 #endif

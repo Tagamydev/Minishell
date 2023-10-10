@@ -6,30 +6,21 @@
 /*   By: shujiang <shujiang@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/07/31 16:34:14 by samusanc          #+#    #+#             */
-/*   Updated: 2023/09/19 17:16:35 by shujiang         ###   ########.fr       */
+/*   Updated: 2023/10/09 14:28:17 by samusanc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <minishell.h>
 
-void	leaks()
+void	leaks(void)
 {
 	system("leaks -q minishell");
 }
 
-void	*ft_free(void **str)
-{
-	if (*str)
-	{
-		free(*str);
-		*str = NULL;
-	}
-	return (0);
-}
-
 void	ft_free_input(char **input)
 {
-	int i;
+	int	i;
+
 	i = 0;
 	while (input[i])
 	{
@@ -39,109 +30,15 @@ void	ft_free_input(char **input)
 	free (input);
 }
 
-void	*ft_print_error(char *str, int error)
-{
-	write(2, "\7minishell: ", 12);
-	write(2, str, ft_strlen(str));
-	write(2, "\n", 1);
-	ft_put_error(error);
-	errno = error;
-	return (NULL);
-}
-
-int shell_mode(char **env)
-{
-	char	*line;
-	int		fd_mini_history;
-	
-	t_list	*history;
-	t_static *s;
-	flag = 0;
-	fd_mini_history = 0;
-	//atexit(leaks);
-	
-	ft_get_old_history(env, &fd_mini_history);
-	ft_put_history(fd_mini_history);
-	line = NULL;
-	signal(SIGINT, handler);
-	signal(SIGQUIT, quit_signal);
-	
-	history = NULL;
-	
-	ft_lstadd_back(&history, ft_lstnew((void *)ft_strdup("")));
-	ft_put_static(init_static_struct(env));
-	s = ft_get_static();
-	s->history = history;
-
-	ft_copy_env(env);
-
-	creat_exp_list(s);
-
-	ft_put_error(0);
-	flag = SHELL;
-	while (1)
-	{
-		if (flag != 3)
-			flag = SHELL;
-		//line = readline("minishell$ ");
-		if (isatty(fileno(stdin)))
-		{
-			if (flag != 3)
-				line = readline("minishell$ ");
-			else
-			{
-				line = readline("minishell$ ");
-				flag = 0;
-			}
-		}
-		else
-		{
-			char *line2;
-			line2 = get_next_line(fileno(stdin));
-			line = ft_strtrim(line2, "\n");
-			free(line2);
-		}
-		if (!line)
-		{
-	//		write(STDERR_FILENO, "exit\n", 5);
-			ft_free((void *)&line);
-			//printf("this is the error:%d\n", ft_get_error());
-			ft_save_history();
-			exit(ft_get_error());
-		}
-		add_history(line);
-		ft_lstadd_back(&history, ft_lstnew((void *)ft_strdup(line)));
-		if (ft_check_argument(line) == 1)
-		{
-			ft_procces_maker(line, env);
-			ft_put_proccess(0);
-		}
-		else
-			ft_free((void *)&line);
-	}
-	/* printf("old: %s\n", s->oldpwd->content);
-    printf("last: %s\n", s->last_cmd->content); */
-	exit(ft_get_error());
-}
-
-int	exc_mode(char *file, char **env)
-{
+/*
 	char *str;
 	char *gnl;
-	//=========================================================================================
-	t_list	*history;
 	t_static *s;
 
 	ft_put_static(init_static_struct(env));
 	s = ft_get_static();
-	history = s->history;
-	ft_copy_env(env);
-
-	creat_exp_list(s);
 	ft_put_error(0);
-
 	errno = 0;
-	//=========================================================================================
 	int fd = 0;
 	fd = open(file, O_RDONLY);
 	if (fd == -1)
@@ -173,55 +70,20 @@ int	exc_mode(char *file, char **env)
 		ft_free((void **)&gnl);
 	}
 	return (0);
+*/
+int	exc_mode(void)
+{
+	write(STDERR_FILENO, "minishell: srry i am lazy\n", 26);
+	exit (-1);
 }
 
 int	main(int argc, char **argv, char **env)
 {
-	if (argc == 1)
-		return (shell_mode(env));
-	else 
-		return (exc_mode(argv[1], env));
-	
-}
-
-//This is a main to test the fuction add_list_and_sort
-/* int main()
-{
-    t_list *list;
-    char pwd[4096];
-
-    t_list *temp;
-
-    getcwd(pwd, sizeof(pwd));
-    list = malloc(sizeof(t_list));
-    list = ft_lstnew(ft_strjoin("PWD=",pwd));
-	add_list_and_sort(&list, ft_lstnew("Bpple="));
-    add_list_and_sort(&list, ft_lstnew("_=./minishell"));
-    add_list_and_sort(&list, ft_lstnew("SHLVL=1"));
-	add_list_and_sort(&list, ft_lstnew("Aanana"));
-	add_list_and_sort(&list, ft_lstnew("Bpple=9"));
-	add_list_and_sort(&list, ft_lstnew("AAA=9"));
-	add_list_and_sort(&list, ft_lstnew("Aanana = BANANA"));
-    
-    temp = list;
-    while(temp)
-    {
-        printf("%s\n", temp->content);
-        temp = temp->next;
-    }
-    return (0);
-}  */
-
-/* This main is for testing env
-int main(int argc, char **argv, char **env)
-{
 	(void)argc;
 	(void)argv;
-	
-	t_static *s;
-    ft_put_static(init_static_struct());
-	s = ft_get_static();
-	ft_copy_env(env);
-	print_env_cpy();
-    return (0);
-} */
+	(void)env;
+	if (argc == 1)
+		return (shell_mode(env));
+	else
+		return (exc_mode());
+}

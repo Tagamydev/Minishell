@@ -6,97 +6,47 @@
 /*   By: shujiang <shujiang@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/08/29 15:34:53 by shujiang          #+#    #+#             */
-/*   Updated: 2023/09/19 17:15:15 by shujiang         ###   ########.fr       */
+/*   Updated: 2023/10/09 12:27:12 by samusanc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <minishell.h>
 
-char *ft_get_info_from_env(char **env, char *var_name)
+void	*error_init_static(int x, int *i, t_static *s)
 {
-    int i;
-    int len;
-
-    len = 0;
-    i = 0;
-    if (var_name)
-        len = ft_strlen(var_name);
-    while (env[i])
-    {
-        if (ft_strncmp(env[i], var_name, len) == 0)
-            return (env[i]);
-        i++;
-    }
-    return (NULL);
+	if (s->here)
+		close(s->here);
+	ft_free((void **)&i);
+	if (s)
+		ft_free((void **)&s->error);
+	ft_free((void **)&s);
+	if (x == 1)
+		perror("malloc: ");
+	else
+		perror("dup: ");
+	return (NULL);
 }
 
-void ft_update_shlvl(char **env)
+t_static	*init_static_struct(char **env)
 {
-    int i = 0;
-    char *shlvl;
-    int nb;
-    char *new_shlvl;
-    
-    new_shlvl = NULL;
-    nb = 0;
-    shlvl = NULL;
-    while (env[i])
-    {
-        if (!ft_strncmp(env[i], "SHLVL=", 6))
-        {
-            shlvl = ft_substr(env[i], 6, ft_strlen(env[i]));
-            nb = ft_atoi(shlvl);
-            free (shlvl);
-            nb++;
-            new_shlvl = ft_itoa(nb);
-            env[i] = ft_strjoin("SHLVL=", new_shlvl);
-            free (new_shlvl);
-            break ;
-        }
-        i++; 
-    }
-}
+	t_static	*s;
+	int			*i;
 
-t_static *init_static_struct(char **env)
-{
-    t_static *s;
-    int *i;
-    char pwd[4096];
-    
-    s = calloc(1, sizeof(t_static));
-    if(!s)
-	{
-        perror("calloc: ");
-		return (NULL);
-	}
-    i = malloc(sizeof(int));
+	i = NULL;
+	s = ft_calloc(1, sizeof(t_static));
+	if (!s)
+		return (error_init_static(1, i, s));
+	i = malloc(sizeof(int));
 	if (!i)
-	{
-        perror("malloc: ");
-		return (NULL);
-	}
+		return (error_init_static(1, i, s));
 	*i = 0;
-	s->error = ft_lstnew((void *)i);
-    s->pwd = ft_lstnew((void *)getcwd(pwd, sizeof(pwd)));
+	s->here = 0;
 	s->here = dup(STDIN_FILENO);
 	if (s->here == -1)
-	{
-		perror("dup: ");
-		return (NULL);
-	} 
-    if (!(*env))
-    {
-        s->oldpwd = ft_lstnew("OLDPWD");
-        s->last_cmd = ft_lstnew("_=./minishell");
-    }
-    else
-    {   
-        ft_update_shlvl(env);
-        s->oldpwd = ft_lstnew(ft_get_info_from_env(env, "OLDPWD="));
-        s->last_cmd = ft_lstnew(ft_get_info_from_env(env, "_="));
-        /* printf("old: %s\n", s->oldpwd->content);
-        printf("last: %s\n", s->last_cmd->content); */
-    }
-    return (s);
+		return (error_init_static(2, i, s));
+	s->error = NULL;
+	s->error = ft_lstnew((void *)i);
+	if (!s->error)
+		return (error_init_static(1, i, s));
+	return (ft_setup_struct(env, s));
 }
-   
